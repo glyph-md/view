@@ -1,0 +1,51 @@
+name: Deploy
+
+# Builds Glyph's web viewer from a hamidfzm/glyph ref and publishes it to
+# GitHub Pages. hamidfzm/glyph's release workflow starts this with each
+# release tag (its publish-web-viewer job); run it by hand to redeploy.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Tag or commit of hamidfzm/glyph to build
+        required: true
+
+permissions: {}
+
+# One deploy at a time; a newer one waits rather than cutting the running one off.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      # Glyph at the workspace root, so its own pnpm setup action finds its
+      # .nvmrc. No token in the checkout: the install below runs dependency code.
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          repository: hamidfzm/glyph
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - uses: ./.github/actions/pnpm-setup
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:web
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: dist-web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
