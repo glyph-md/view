@@ -5,5 +5,12 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # As in hamidfzm/glyph: a release waits a week before it is proposed, and a
+    # major version is a deliberate change made by hand.
+    cooldown:
+      default-days: 7
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     commit-message:
       prefix: chore(ci)
